@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python -m backend.bot.telegram_bot"
+restartPolicyType = "on_failure"
