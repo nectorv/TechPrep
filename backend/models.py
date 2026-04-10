@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, Text, Float, DateTime,
+    Column, Integer, BigInteger, String, Text, Float, DateTime,
     ForeignKey, CheckConstraint, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, backref
@@ -13,7 +13,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
-    telegram_id = Column(Integer, unique=True, nullable=True, index=True)
+    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     plans = relationship("Plan", back_populates="user")
