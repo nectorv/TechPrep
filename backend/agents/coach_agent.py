@@ -62,7 +62,7 @@ TOOLS = [
     },
     {
         "name": "update_settings",
-        "description": "Update a plan setting (daily_goal, teacher_severity, preferred_channel, session_length)",
+        "description": "Update a plan setting (daily_goal, teacher_severity, preferred_channel, session_length). teacher_severity must be an integer 1-5.",
         "input_schema": {
             "type": "object",
             "properties": {

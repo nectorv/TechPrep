@@ -153,7 +153,12 @@ def submit_answer(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    severity = int(_get_setting(db, session.plan_id, "teacher_severity", "3"))
+    _severity_map = {"low": 1, "easy": 1, "moderate": 3, "medium": 3, "high": 5, "hard": 5, "strict": 5}
+    _raw_severity = _get_setting(db, session.plan_id, "teacher_severity", "3")
+    try:
+        severity = int(_raw_severity)
+    except ValueError:
+        severity = _severity_map.get(_raw_severity.lower(), 3)
     try:
         evaluation = interview_agent.evaluate(
             question_content=question.content,
