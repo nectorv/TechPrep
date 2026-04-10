@@ -10,13 +10,16 @@ app = FastAPI(title="TechPrep API", version="0.1.0")
 
 _origins = ["http://localhost:5173", "http://localhost:5174"]
 if os.getenv("FRONTEND_URL"):
-    _origins.append(os.getenv("FRONTEND_URL").rstrip("/"))
+    # Strip all whitespace including hidden/zero-width characters
+    _frontend_url = "".join(os.getenv("FRONTEND_URL").split()).rstrip("/")
+    _origins.append(_frontend_url)
 
 logger.warning("CORS allowed origins: %s", _origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
