@@ -10,7 +10,7 @@ app = FastAPI(title="TechPrep API", version="0.1.0")
 
 _origins = ["http://localhost:5173", "http://localhost:5174"]
 if os.getenv("FRONTEND_URL"):
-    _origins.append(os.getenv("FRONTEND_URL"))
+    _origins.append(os.getenv("FRONTEND_URL").rstrip("/"))
 
 logger.warning("CORS allowed origins: %s", _origins)
 
