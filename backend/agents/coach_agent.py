@@ -1,7 +1,8 @@
 import os
 import json
+import time
 from datetime import datetime
-from anthropic import Anthropic
+from anthropic import Anthropic, APIStatusError
 from sqlalchemy.orm import Session
 from .. import models
 from ..services.question_gen import generate_questions
@@ -271,9 +272,12 @@ def _build_system_prompt(db: Session, user_id: int, plan_id: int) -> str:
         "Your questions will be used in a smart flashcard system that grades the user's answers and schedules reviews based on an SM-2 algorithm.\n"
         "You have access to a question database via your tools.\n"
         "When the user asks you to generate questions on a topic, "
-        "propose questions based on the themes in their plan."
+        "propose questions based on the themes in their plan. "
         "Always confirm the theme and question parameters before generating, then "
         "use add_questions and provide a preview of what was created.\n\n"
+        "IMPORTANT: Never call add_questions for more than 3 themes in a single response. "
+        "If the user asks to generate questions for many themes at once, do 3 at a time "
+        "and tell the user to ask again to continue with the next batch.\n\n"
         "User context: professional preparing for job interviews.\n\n"
         f"Themes in this plan:\n{themes_str}\n\n"
         f"Current settings:\n{settings_str}\n\n"
@@ -305,13 +309,27 @@ def run(user_message: str, db: Session, user_id: int, plan_id: int) -> str:
     system_prompt = _build_system_prompt(db, user_id, plan_id)
 
     while True:
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=4096,
-            system=system_prompt,
-            tools=TOOLS,
-            messages=messages,
-        )
+        for attempt in range(4):
+            try:
+                response = client.messages.create(
+                    model=MODEL,
+                    max_tokens=4096,
+                    system=system_prompt,
+                    tools=TOOLS,
+                    messages=messages,
+                )
+                break
+            except APIStatusError as e:
+                if e.status_code == 529 and attempt < 3:
+                    time.sleep(2 ** attempt)
+                    continue
+                reply = "The AI is overloaded right now. Please try again in a few seconds."
+                db.add(models.CoachMessage(
+                    user_id=user_id, plan_id=plan_id, role="assistant", content=reply,
+                ))
+                db.commit()
+                return reply
+
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "end_turn":

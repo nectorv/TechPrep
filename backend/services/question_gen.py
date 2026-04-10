@@ -1,6 +1,7 @@
 import os
 import json
-from anthropic import Anthropic
+import time
+from anthropic import Anthropic, APIStatusError
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-20250514"
@@ -31,14 +32,21 @@ def generate_questions(theme_name: str, count: int, difficulty: int, q_type: str
         f'- Do not number the questions inside the content field.'
     )
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    for attempt in range(4):
+        try:
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            break
+        except APIStatusError as e:
+            if e.status_code == 529 and attempt < 3:
+                time.sleep(2 ** attempt)  # 1s, 2s, 4s
+                continue
+            raise
 
     raw = response.content[0].text.strip()
-    # Strip markdown code fences if Claude adds them despite instructions
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
