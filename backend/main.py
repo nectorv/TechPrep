@@ -1,13 +1,18 @@
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, coach, interview, dashboard, plans
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TechPrep API", version="0.1.0")
 
 _origins = ["http://localhost:5173", "http://localhost:5174"]
 if os.getenv("FRONTEND_URL"):
     _origins.append(os.getenv("FRONTEND_URL"))
+
+logger.warning("CORS allowed origins: %s", _origins)
 
 app.add_middleware(
     CORSMiddleware,
