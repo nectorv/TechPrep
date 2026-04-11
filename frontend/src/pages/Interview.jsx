@@ -177,7 +177,7 @@ export default function Interview() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+      <div className="flex-1 overflow-y-auto flex flex-col items-center px-4 py-12">
 
         {/* ── LOBBY ── */}
         {state === S.LOBBY && (

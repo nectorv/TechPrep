@@ -37,7 +37,7 @@ from telegram.ext import (
 
 from ..database import SessionLocal
 from .. import models
-from ..agents import interview_agent
+from ..agents import interview_agent, teacher_agent
 from ..services.sm2 import update_sm2
 from ..services.transcription import transcribe_audio
 from ..routers.interview import _next_question
@@ -479,9 +479,8 @@ async def _process_answer(
 
         if skip:
             evaluation = {
-                "feedback": "Question skipped\\.",
+                "feedback": "Question skipped.",
                 "grade": 0,
-                "correct_answer_hint": question.content[:300],
             }
         else:
             evaluation = await asyncio.to_thread(
@@ -518,6 +517,19 @@ async def _process_answer(
         update_sm2(progress, grade)
         db.commit()
 
+        # Fetch or generate explanation for poor answers
+        explanation = None
+        if grade <= 2:
+            if question.explanation:
+                explanation = question.explanation
+            else:
+                try:
+                    explanation = await asyncio.to_thread(teacher_agent.explain, question.content)
+                    question.explanation = explanation
+                    db.commit()
+                except Exception:
+                    logger.error("teacher_agent failed for question %s", question.id, exc_info=True)
+
         # Get next question before sending feedback
         next_q = _next_question(db, user_id, plan_id, session_id)
 
@@ -527,9 +539,8 @@ async def _process_answer(
                 f"Next review: {_e(progress.interval_days)}d · Status: {_e(progress.status)}\n\n"
                 f"{_e(evaluation['feedback'])}"
             )
-            hint = evaluation.get("correct_answer_hint")
-            if hint and grade <= 2:
-                msg += f"\n\n💡 *Expected answer:*\n{_e(hint)}"
+            if explanation:
+                msg += f"\n\n📖 *Model Explanation:*\n{_e(explanation)}"
             await update.message.reply_text(msg, parse_mode="MarkdownV2")
         else:
             state["mock_log"].append({
@@ -537,7 +548,7 @@ async def _process_answer(
                 "answer": answer_text,
                 "feedback": evaluation["feedback"],
                 "grade": grade,
-                "hint": evaluation.get("correct_answer_hint"),
+                "explanation": explanation,
             })
             count = len(state["mock_log"])
             await update.message.reply_text(f"✅ Answer {count} recorded\\.", parse_mode="MarkdownV2")
@@ -590,8 +601,8 @@ async def _send_mock_review(update: Update, mock_log: list):
             f"{GRADE_EMOJI[g]} *{_e(GRADE_LABEL[g])}* \\({g}/5\\)\n\n"
             f"{_e(entry['feedback'])}"
         )
-        if entry.get("hint") and g <= 2:
-            msg += f"\n\n💡 {_e(entry['hint'])}"
+        if entry.get("explanation"):
+            msg += f"\n\n📖 *Model Explanation:*\n{_e(entry['explanation'])}"
         await msg_target.reply_text(msg, parse_mode="MarkdownV2")
 
     total = len(mock_log)
