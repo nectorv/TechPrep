@@ -29,6 +29,7 @@ export default function Interview() {
   const [sessionId, setSessionId] = useState(null)
   const [question, setQuestion]   = useState(null)
   const [answer, setAnswer]       = useState('')
+  const [retryAnswer, setRetryAnswer] = useState('')
   const [evaluation, setEvaluation] = useState(null)
   const [reviewItems, setReviewItems] = useState([])
   const [error, setError]         = useState('')
@@ -129,6 +130,26 @@ export default function Interview() {
     } catch (err) {
       setError(err.message)
       setState(S.QUESTION)
+    }
+  }
+
+  async function submitRetry() {
+    if (!retryAnswer.trim()) return
+    setError('')
+    setState(S.EVALUATING)
+    try {
+      const data = await interviewApi.submitAnswer(sessionId, question.id, retryAnswer.trim(), true)
+      setEvaluation(data)
+      setRetryAnswer('')
+      if (sessionType === 'mock') {
+        if (data.next_question) { setQuestion(data.next_question); setAnswer(''); setState(S.QUESTION) }
+        else { stopTimer(); await interviewApi.endSession(sessionId).catch(() => {}); loadReview(sessionId) }
+      } else {
+        setState(S.FEEDBACK)
+      }
+    } catch (err) {
+      setError(err.message)
+      setState(S.FEEDBACK)
     }
   }
 
@@ -286,10 +307,24 @@ export default function Interview() {
                 </div>
               </div>
             )}
-            <button onClick={nextQuestion}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 font-medium transition-colors">
-              {evaluation.next_question ? 'Next Question →' : 'Finish Session'}
-            </button>
+            {evaluation.awaiting_retry ? (
+              <div className="space-y-3">
+                <p className="text-yellow-400 text-sm font-medium">🔄 Give it another shot</p>
+                <textarea value={retryAnswer} onChange={(e) => setRetryAnswer(e.target.value)}
+                  placeholder="Try again with what you just learned…" rows={5}
+                  className="w-full bg-gray-800 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-yellow-500 resize-none leading-relaxed" />
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                <button onClick={submitRetry} disabled={!retryAnswer.trim()}
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3 font-medium transition-colors">
+                  Submit Retry
+                </button>
+              </div>
+            ) : (
+              <button onClick={nextQuestion}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 font-medium transition-colors">
+                {evaluation.next_question ? 'Next Question →' : 'Finish Session'}
+              </button>
+            )}
           </div>
         )}
 

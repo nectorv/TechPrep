@@ -201,9 +201,9 @@ def submit_answer(
     update_sm2(progress, grade)
     db.commit()
 
-    # If the answer was poor, fetch or generate a beginner-friendly explanation
-    explanation = None
-    if grade <= 2:
+    # First attempt with poor grade → generate explanation and ask for retry
+    if not payload.is_retry and grade <= 2:
+        explanation = None
         if question.explanation:
             explanation = question.explanation
         else:
@@ -214,6 +214,21 @@ def submit_answer(
             except Exception as e:
                 logger.error("teacher_agent failed for question %s: %s", question.id, e, exc_info=True)
 
+        return schemas.AnswerEvaluation(
+            answer_id=answer.id,
+            feedback=evaluation["feedback"],
+            grade=grade,
+            explanation=explanation,
+            awaiting_retry=True,
+            sm2=schemas.SM2Result(
+                status=progress.status,
+                interval_days=progress.interval_days,
+                next_review_in_days=progress.interval_days,
+            ),
+            next_question=None,
+        )
+
+    # Retry or good grade → advance to next question
     next_q = _next_question(db, current_user.id, session.plan_id, session_id)
     if next_q is None:
         session.ended_at = datetime.utcnow()
@@ -223,7 +238,8 @@ def submit_answer(
         answer_id=answer.id,
         feedback=evaluation["feedback"],
         grade=grade,
-        explanation=explanation,
+        explanation=None,
+        awaiting_retry=False,
         sm2=schemas.SM2Result(
             status=progress.status,
             interval_days=progress.interval_days,

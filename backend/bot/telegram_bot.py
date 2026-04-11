@@ -464,12 +464,13 @@ async def _process_answer(
     answer_text: str,
     skip: bool = False,
 ):
-    state = _state[tg_id]
+    state      = _state[tg_id]
     question   = state["question"]
     session_id = state["session_id"]
     user_id    = state["user_id"]
     plan_id    = state["plan_id"]
     mode       = state["mode"]
+    is_retry   = state.pop("awaiting_retry", False)
 
     await update.message.reply_text("⏳ Evaluating…")
 
@@ -517,9 +518,9 @@ async def _process_answer(
         update_sm2(progress, grade)
         db.commit()
 
-        # Fetch or generate explanation for poor answers
+        # Fetch or generate explanation for poor first attempts (not retries, not mock)
         explanation = None
-        if grade <= 2:
+        if not is_retry and not skip and grade <= 2 and mode == "practice":
             if question.explanation:
                 explanation = question.explanation
             else:
@@ -542,6 +543,15 @@ async def _process_answer(
             if explanation:
                 msg += f"\n\n📖 *Model Explanation:*\n{_e(explanation)}"
             await update.message.reply_text(msg, parse_mode="MarkdownV2")
+
+            # Offer retry if first poor attempt
+            if not skip and not state.get("awaiting_retry") and grade <= 2 and explanation:
+                state["awaiting_retry"] = True
+                await update.message.reply_text(
+                    "🔄 *Give it another shot\\!*\n\nNow that you've seen the explanation, try answering again\\.",
+                    parse_mode="MarkdownV2",
+                )
+                return  # Don't advance yet
         else:
             state["mock_log"].append({
                 "question": question.content,

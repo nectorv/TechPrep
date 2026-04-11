@@ -121,12 +121,14 @@ class SM2Result(BaseModel):
 class AnswerSubmit(BaseModel):
     question_id: int
     content: str
+    is_retry: bool = False
 
 class AnswerEvaluation(BaseModel):
     answer_id: int
     feedback: str
     grade: int
     explanation: Optional[str]
+    awaiting_retry: bool = False
     sm2: SM2Result
     next_question: Optional[QuestionForInterview]
 
