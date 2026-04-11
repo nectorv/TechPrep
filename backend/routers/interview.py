@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,6 +7,8 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..agents import interview_agent, teacher_agent
 from ..services.sm2 import update_sm2
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -208,8 +211,8 @@ def submit_answer(
                 explanation = teacher_agent.explain(question.content)
                 question.explanation = explanation
                 db.commit()
-            except Exception:
-                pass  # non-critical — feedback is still returned
+            except Exception as e:
+                logger.error("teacher_agent failed for question %s: %s", question.id, e, exc_info=True)
 
     next_q = _next_question(db, current_user.id, session.plan_id, session_id)
     if next_q is None:
