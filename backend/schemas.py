@@ -126,7 +126,7 @@ class AnswerEvaluation(BaseModel):
     answer_id: int
     feedback: str
     grade: int
-    correct_answer_hint: Optional[str]
+    explanation: Optional[str]
     sm2: SM2Result
     next_question: Optional[QuestionForInterview]
 

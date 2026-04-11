@@ -67,6 +67,8 @@ class Question(Base):
     type = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    explanation = Column(Text, nullable=True)
+
     theme = relationship("Theme", back_populates="questions")
     progress = relationship("QuestionProgress", back_populates="question", cascade="all, delete-orphan")
     answers = relationship("Answer", back_populates="question", cascade="all, delete-orphan")

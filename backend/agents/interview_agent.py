@@ -31,8 +31,7 @@ For each answer you must:
 Always respond with ONLY this JSON (no prose outside the object):
 {{
   "feedback": "<feedback text>",
-  "grade": <integer 0-5>,
-  "correct_answer_hint": "<one or two concise sentences — include only when grade <= 3, else null>"
+  "grade": <integer 0-5>
 }}"""
 
 
@@ -67,10 +66,4 @@ def evaluate(question_content: str, answer: str, teacher_severity: int = 2) -> d
         if raw.startswith("json"):
             raw = raw[4:]
 
-    result = json.loads(raw)
-
-    # Normalise: ensure correct_answer_hint is absent when grade > 2
-    if result.get("grade", 0) > 2:
-        result["correct_answer_hint"] = None
-
-    return result
+    return json.loads(raw)

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..auth import get_current_user
 from ..database import get_db
-from ..agents import interview_agent
+from ..agents import interview_agent, teacher_agent
 from ..services.sm2 import update_sm2
 
 router = APIRouter()
@@ -198,6 +198,19 @@ def submit_answer(
     update_sm2(progress, grade)
     db.commit()
 
+    # If the answer was poor, fetch or generate a beginner-friendly explanation
+    explanation = None
+    if grade <= 2:
+        if question.explanation:
+            explanation = question.explanation
+        else:
+            try:
+                explanation = teacher_agent.explain(question.content)
+                question.explanation = explanation
+                db.commit()
+            except Exception:
+                pass  # non-critical — feedback is still returned
+
     next_q = _next_question(db, current_user.id, session.plan_id, session_id)
     if next_q is None:
         session.ended_at = datetime.utcnow()
@@ -207,7 +220,7 @@ def submit_answer(
         answer_id=answer.id,
         feedback=evaluation["feedback"],
         grade=grade,
-        correct_answer_hint=evaluation.get("correct_answer_hint"),
+        explanation=explanation,
         sm2=schemas.SM2Result(
             status=progress.status,
             interval_days=progress.interval_days,

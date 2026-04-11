@@ -278,10 +278,12 @@ export default function Interview() {
                 <ReactMarkdown>{evaluation.feedback}</ReactMarkdown>
               </div>
             </div>
-            {evaluation.correct_answer_hint && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-5">
-                <p className="text-yellow-400 text-xs uppercase tracking-wide mb-2 font-medium">Expected answer</p>
-                <p className="text-gray-200 text-sm leading-relaxed">{evaluation.correct_answer_hint}</p>
+            {evaluation.explanation && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5">
+                <p className="text-blue-400 text-xs uppercase tracking-wide mb-3 font-medium">📖 Model Explanation</p>
+                <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 text-gray-200">
+                  <ReactMarkdown>{evaluation.explanation}</ReactMarkdown>
+                </div>
               </div>
             )}
             <button onClick={nextQuestion}
