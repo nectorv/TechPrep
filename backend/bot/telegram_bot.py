@@ -99,7 +99,7 @@ def _teacher_severity(db, user_id: int, plan_id: int) -> int:
         models.Setting.plan_id == plan_id,
         models.Setting.key == "teacher_severity",
     ).first()
-    return int(row.value) if row else 3
+    return int(row.value) if row else 2
 
 
 # ── Message formatting ────────────────────────────────────────────────────────

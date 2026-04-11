@@ -157,7 +157,7 @@ def submit_answer(
         raise HTTPException(status_code=404, detail="Question not found")
 
     _severity_map = {"low": 1, "easy": 1, "moderate": 3, "medium": 3, "high": 5, "hard": 5, "strict": 5}
-    _raw_severity = _get_setting(db, session.plan_id, "teacher_severity", "3")
+    _raw_severity = _get_setting(db, session.plan_id, "teacher_severity", "2")
     try:
         severity = int(_raw_severity)
     except ValueError:
