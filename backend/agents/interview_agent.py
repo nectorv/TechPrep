@@ -22,11 +22,11 @@ For each answer you must:
    - Keep the total feedback under 120 words
 2. Assign an SM-2 grade between 0 and 5:
    - 0: complete blackout — no meaningful answer
-   - 1: incorrect, but topic seemed familiar
-   - 2: incorrect, but candidate could recall after seeing solution
-   - 3: correct with significant difficulty or important gaps
-   - 4: correct after slight hesitation or minor gaps
-   - 5: perfect — immediate, precise, complete
+   - 1: major misunderstanding of the topic
+   - 2: on the right track but fundamentally incomplete or wrong
+   - 3: correct but missing important details or context
+   - 4: solid answer — covers the core concept well, minor gaps acceptable
+   - 5: complete and confident — no significant gaps
 
 Always respond with ONLY this JSON (no prose outside the object):
 {{
