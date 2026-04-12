@@ -12,6 +12,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_DONT_KNOW_PATTERNS = {
+    "idk", "i don't know", "i dont know", "i do not know",
+    "no idea", "not sure", "don't know", "dont know",
+    "no clue", "skip", "pass", "?", "...", "nothing",
+    "i have no idea", "i'm not sure", "im not sure",
+    "i don't have an answer", "i dont have an answer",
+}
+
+def _is_dont_know(text: str) -> bool:
+    normalized = " ".join(text.lower().split())
+    if len(normalized.split()) > 15:
+        return False
+    return normalized in _DONT_KNOW_PATTERNS
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -162,15 +176,19 @@ def submit_answer(
         severity = int(_raw_severity)
     except ValueError:
         severity = _severity_map.get(_raw_severity.lower(), 3)
-    try:
-        evaluation = interview_agent.evaluate(
-            question_content=question.content,
-            answer=payload.content,
-            teacher_severity=severity,
-            is_retry=payload.is_retry,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Evaluation failed: {e}")
+
+    if _is_dont_know(payload.content):
+        evaluation = {"feedback": "No answer provided.", "grade": 0}
+    else:
+        try:
+            evaluation = interview_agent.evaluate(
+                question_content=question.content,
+                answer=payload.content,
+                teacher_severity=severity,
+                is_retry=payload.is_retry,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Evaluation failed: {e}")
 
     grade = evaluation["grade"]
 

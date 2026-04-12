@@ -40,7 +40,7 @@ from .. import models
 from ..agents import interview_agent, teacher_agent
 from ..services.sm2 import update_sm2
 from ..services.transcription import transcribe_audio
-from ..routers.interview import _next_question
+from ..routers.interview import _next_question, _is_dont_know
 
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -483,6 +483,8 @@ async def _process_answer(
                 "feedback": "Question skipped.",
                 "grade": 0,
             }
+        elif _is_dont_know(answer_text):
+            evaluation = {"feedback": "No answer provided.", "grade": 0}
         else:
             evaluation = await asyncio.to_thread(
                 interview_agent.evaluate,
