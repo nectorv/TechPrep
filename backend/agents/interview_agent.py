@@ -34,15 +34,43 @@ Always respond with ONLY this JSON (no prose outside the object):
   "grade": <integer 0-5>
 }}"""
 
+_SYSTEM_RETRY_TEMPLATE = """\
+You are a technical interviewer evaluating a SECOND ATTEMPT.
 
-def evaluate(question_content: str, answer: str, teacher_severity: int = 2) -> dict:
+The candidate previously failed this question and was shown a model explanation.
+They are now trying again based on what they just learned.
+
+Your goal is to assess whether they understood the concept — not whether they could
+have answered cold. Be generous: if they demonstrate understanding of the core idea,
+award a high grade even if their wording is imperfect or they missed minor details.
+
+Feedback severity: {severity}/5 (apply leniently — this is a learning retry)
+
+Grading for a retry:
+  - 5: demonstrates clear understanding of the concept
+  - 4: mostly correct, minor gaps or wording issues
+  - 3: partial understanding — got the gist but missed key parts
+  - 2 or below: still fundamentally wrong despite seeing the explanation
+
+Give brief, encouraging feedback (under 80 words):
+  - Focus on what they got right
+  - Note any remaining gaps briefly
+
+Always respond with ONLY this JSON (no prose outside the object):
+{{
+  "feedback": "<feedback text>",
+  "grade": <integer 0-5>
+}}"""
+
+
+def evaluate(question_content: str, answer: str, teacher_severity: int = 2, is_retry: bool = False) -> dict:
     """
     Evaluate a candidate's answer to a technical question.
-
-    Returns a dict: {feedback, grade, correct_answer_hint}
+    Returns a dict: {feedback, grade}
     """
     severity = max(1, min(5, teacher_severity))
-    system = _SYSTEM_TEMPLATE.format(severity=severity)
+    template = _SYSTEM_RETRY_TEMPLATE if is_retry else _SYSTEM_TEMPLATE
+    system = template.format(severity=severity)
 
     response = client.messages.create(
         model=MODEL,
@@ -60,7 +88,6 @@ def evaluate(question_content: str, answer: str, teacher_severity: int = 2) -> d
     )
 
     raw = response.content[0].text.strip()
-    # Strip markdown fences defensively
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

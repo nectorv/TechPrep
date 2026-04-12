@@ -167,6 +167,7 @@ def submit_answer(
             question_content=question.content,
             answer=payload.content,
             teacher_severity=severity,
+            is_retry=payload.is_retry,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {e}")

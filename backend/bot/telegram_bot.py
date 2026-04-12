@@ -489,6 +489,7 @@ async def _process_answer(
                 question.content,
                 answer_text,
                 severity,
+                is_retry,
             )
 
         grade = evaluation["grade"]
