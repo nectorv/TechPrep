@@ -26,6 +26,20 @@ TOOLS = [
         },
     },
     {
+        "name": "add_specific_question",
+        "description": "Add a single manually specified question to the DB for a given theme",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "theme_id":   {"type": "integer"},
+                "content":    {"type": "string", "description": "The exact question text"},
+                "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
+                "type":       {"type": "string", "enum": ["concept", "algo", "system_design", "behavioral"]},
+            },
+            "required": ["theme_id", "content", "difficulty", "type"],
+        },
+    },
+    {
         "name": "delete_question",
         "description": "Delete a question by its ID",
         "input_schema": {
@@ -142,6 +156,32 @@ def _add_questions(inp: dict, db: Session, user_id: int, plan_id: int) -> str:
     return json.dumps(result)
 
 
+def _add_specific_question(inp: dict, db: Session, user_id: int, plan_id: int) -> str:
+    theme = (
+        db.query(models.Theme)
+        .filter(
+            models.Theme.id == inp["theme_id"],
+            models.Theme.user_id == user_id,
+            models.Theme.plan_id == plan_id,
+        )
+        .first()
+    )
+    if not theme:
+        return json.dumps({"error": "Theme not found in this plan"})
+
+    question = models.Question(
+        theme_id=theme.id,
+        content=inp["content"],
+        difficulty=inp["difficulty"],
+        type=inp["type"],
+    )
+    db.add(question)
+    db.flush()
+    db.add(models.QuestionProgress(question_id=question.id, user_id=user_id))
+    db.commit()
+    return json.dumps({"id": question.id, "content": inp["content"][:120]})
+
+
 def _delete_question(inp: dict, db: Session, user_id: int, plan_id: int) -> str:
     question = (
         db.query(models.Question)
@@ -238,11 +278,12 @@ def _dispatch_tool(name: str, inp: dict, db: Session, user_id: int, plan_id: int
     if name == "get_study_overview":
         return _get_study_overview(db, user_id, plan_id)
     handlers = {
-        "add_theme":       _add_theme,
-        "add_questions":   _add_questions,
-        "delete_question": _delete_question,
-        "list_questions":  _list_questions,
-        "update_settings": _update_settings,
+        "add_theme":             _add_theme,
+        "add_questions":         _add_questions,
+        "add_specific_question": _add_specific_question,
+        "delete_question":       _delete_question,
+        "list_questions":        _list_questions,
+        "update_settings":       _update_settings,
     }
     if name in handlers:
         return handlers[name](inp, db, user_id, plan_id)
